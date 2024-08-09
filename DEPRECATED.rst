@@ -521,6 +521,9 @@ was updated to be consistent with the calculated values by Sharp & Li.
 Function 'GC' in Bio.SeqUtils was deprecated in Release 1.80, and removed in
 Release 1.82. Instead use function 'gc_fraction'.
 
+Function get_amino_acids_percent in Bio.SeqUtils.ProteinAnalysis was deprecated
+in Release 1.85. Use the amino_acids_percent property instead.
+
 Bio.PopGen.Async
 ----------------
 ``Bio.PopGen.Async`` was deprecated in Release 1.68, removed in Release 1.70.
@@ -622,6 +625,12 @@ Bio.Wise
 --------
 The ``Bio.Wise`` module was deprecated in Release 1.80, and removed in Release
 1.82.
+
+Bio.Nexus
+---------
+The ``original_taxon_order`` attribute of the ``Nexus`` class in
+``Bio.Nexus.Nexus`` was deprecated in Release 1.80, and removed in
+Release 1.85.  Please use the ``taxlabels`` attribute instead.
 
 Scripts/Restriction/ranacompiler.py
 -----------------------------------

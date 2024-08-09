@@ -169,6 +169,46 @@ G:   0.17   0.17   0.17   0.17   0.17
 T:   0.50   0.17   0.50   0.17   0.50
 """
         self.assertEqual(str(m.pwm), expected_reverse_pwm)
+        # Same but for RNA motif.
+        background_rna = {"A": 0.3, "C": 0.2, "G": 0.2, "U": 0.3}
+        pseudocounts = 0.5
+        m_rna = motifs.create([Seq("AUAUA")], alphabet="ACGU")
+        m_rna.background = background_rna
+        m_rna.pseudocounts = pseudocounts
+        expected_forward_rna_counts = """\
+        0      1      2      3      4
+A:   1.00   0.00   1.00   0.00   1.00
+C:   0.00   0.00   0.00   0.00   0.00
+G:   0.00   0.00   0.00   0.00   0.00
+U:   0.00   1.00   0.00   1.00   0.00
+"""
+        self.assertEqual(str(m_rna.counts), expected_forward_rna_counts)
+        expected_forward_rna_pwm = """\
+        0      1      2      3      4
+A:   0.50   0.17   0.50   0.17   0.50
+C:   0.17   0.17   0.17   0.17   0.17
+G:   0.17   0.17   0.17   0.17   0.17
+U:   0.17   0.50   0.17   0.50   0.17
+"""
+        self.assertEqual(str(m_rna.pwm), expected_forward_rna_pwm)
+        expected_reverse_rna_counts = """\
+        0      1      2      3      4
+A:   0.00   1.00   0.00   1.00   0.00
+C:   0.00   0.00   0.00   0.00   0.00
+G:   0.00   0.00   0.00   0.00   0.00
+U:   1.00   0.00   1.00   0.00   1.00
+"""
+        self.assertEqual(
+            str(m_rna.reverse_complement().counts), expected_reverse_rna_counts
+        )
+        expected_reverse_rna_pwm = """\
+        0      1      2      3      4
+A:   0.17   0.50   0.17   0.50   0.17
+C:   0.17   0.17   0.17   0.17   0.17
+G:   0.17   0.17   0.17   0.17   0.17
+U:   0.50   0.17   0.50   0.17   0.50
+"""
+        self.assertEqual(str(m_rna.reverse_complement().pwm), expected_reverse_rna_pwm)
         # Same thing, but now start with a motif calculated from a count matrix
         m = motifs.create([Seq("ATATA")])
         counts = m.counts
@@ -182,6 +222,18 @@ T:   0.50   0.17   0.50   0.17   0.50
         received_reverse = format(m, "transfac")
         self.assertEqual(received_reverse, expected_reverse)
         self.assertEqual(str(m.pwm), expected_reverse_pwm)
+        # Same, but for RNA count matrix
+        m_rna = motifs.create([Seq("AUAUA")], alphabet="ACGU")
+        counts = m_rna.counts
+        m_rna = motifs.Motif(counts=counts, alphabet="ACGU")
+        m_rna.background = background_rna
+        m_rna.pseudocounts = pseudocounts
+        self.assertEqual(str(m_rna.counts), expected_forward_rna_counts)
+        self.assertEqual(str(m_rna.pwm), expected_forward_rna_pwm)
+        self.assertEqual(
+            str(m_rna.reverse_complement().counts), expected_reverse_rna_counts
+        )
+        self.assertEqual(str(m_rna.reverse_complement().pwm), expected_reverse_rna_pwm)
 
 
 class TestAlignAce(unittest.TestCase):
@@ -1867,7 +1919,7 @@ class TestJASPAR(unittest.TestCase):
             record = motifs.parse(stream, "pfm-four-columns")
         self.assertEqual(len(record), 8)
         motif = record[0]
-        self.assertIsNone(motif.name)
+        self.assertEqual(motif.name, "")
         self.assertEqual(motif.length, 8)
         self.assertEqual(motif.alphabet, "GATC")
         self.assertAlmostEqual(motif.counts["G", 0], 0.009615385)
@@ -2291,7 +2343,7 @@ class TestJASPAR(unittest.TestCase):
         )
         self.assertEqual(motif[1:-2].consensus, "TTGCGT")
         motif = record[6]
-        self.assertIsNone(motif.name)
+        self.assertEqual(motif.name, "")
         self.assertEqual(motif.length, 8)
         self.assertEqual(motif.alphabet, "GATC")
         self.assertAlmostEqual(motif.counts["G", 0], 0.098612000)
@@ -2347,7 +2399,7 @@ class TestJASPAR(unittest.TestCase):
         )
         self.assertEqual(motif[1:-2].consensus, "TGACT")
         motif = record[7]
-        self.assertIsNone(motif.name)
+        self.assertEqual(motif.name, "")
         self.assertEqual(motif.length, 11)
         self.assertEqual(motif.alphabet, "GATC")
         self.assertAlmostEqual(motif.counts["G", 0], 28.0)
@@ -2422,7 +2474,7 @@ class TestJASPAR(unittest.TestCase):
         """Test if Bio.motifs.pfm can parse motifs in position frequency matrix format (4 rows)."""
         with open("motifs/fourrows.pfm") as stream:
             record = motifs.parse(stream, "pfm-four-rows")
-        self.assertEqual(len(record), 8)
+        self.assertEqual(len(record), 9)
         motif = record[0]
         self.assertEqual(motif.name, "")
         self.assertEqual(motif.length, 6)
@@ -2931,6 +2983,67 @@ class TestJASPAR(unittest.TestCase):
             )
         )
         self.assertEqual(motif[:-2].consensus, "CCATAAAT")
+        motif = record[8]
+        self.assertEqual(motif.name, "")
+        self.assertEqual(motif.length, 9)
+        self.assertEqual(motif.alphabet, "GATC")
+        self.assertAlmostEqual(motif.counts["G", 0], 0.016)
+        self.assertAlmostEqual(motif.counts["G", 1], 0.020)
+        self.assertAlmostEqual(motif.counts["G", 2], 0.028)
+        self.assertAlmostEqual(motif.counts["G", 3], 0.016)
+        self.assertAlmostEqual(motif.counts["G", 4], 0.020)
+        self.assertAlmostEqual(motif.counts["G", 5], 0.028)
+        self.assertAlmostEqual(motif.counts["G", 6], 0.047)
+        self.assertAlmostEqual(motif.counts["G", 7], 0.045)
+        self.assertAlmostEqual(motif.counts["G", 8], 0.216)
+        self.assertAlmostEqual(motif.counts["A", 0], 0.116)
+        self.assertAlmostEqual(motif.counts["A", 1], 0.974)
+        self.assertAlmostEqual(motif.counts["A", 2], 0.444)
+        self.assertAlmostEqual(motif.counts["A", 3], 0.116)
+        self.assertAlmostEqual(motif.counts["A", 4], 0.974)
+        self.assertAlmostEqual(motif.counts["A", 5], 0.444)
+        self.assertAlmostEqual(motif.counts["A", 6], 0.667)
+        self.assertAlmostEqual(motif.counts["A", 7], 0.939)
+        self.assertAlmostEqual(motif.counts["A", 8], 0.068)
+        self.assertAlmostEqual(motif.counts["T", 0], 0.150)
+        self.assertAlmostEqual(motif.counts["T", 1], 0.001)
+        self.assertAlmostEqual(motif.counts["T", 2], 0.314)
+        self.assertAlmostEqual(motif.counts["T", 3], 0.150)
+        self.assertAlmostEqual(motif.counts["T", 4], 0.001)
+        self.assertAlmostEqual(motif.counts["T", 5], 0.314)
+        self.assertAlmostEqual(motif.counts["T", 6], 0.143)
+        self.assertAlmostEqual(motif.counts["T", 7], 0.009)
+        self.assertAlmostEqual(motif.counts["T", 8], 0.609)
+        self.assertAlmostEqual(motif.counts["C", 0], 0.718)
+        self.assertAlmostEqual(motif.counts["C", 1], 0.006)
+        self.assertAlmostEqual(motif.counts["C", 2], 0.214)
+        self.assertAlmostEqual(motif.counts["C", 3], 0.718)
+        self.assertAlmostEqual(motif.counts["C", 4], 0.006)
+        self.assertAlmostEqual(motif.counts["C", 5], 0.214)
+        self.assertAlmostEqual(motif.counts["C", 6], 0.143)
+        self.assertAlmostEqual(motif.counts["C", 7], 0.006)
+        self.assertAlmostEqual(motif.counts["C", 8], 0.107)
+        self.assertEqual(motif.consensus, "CAACAAAAT")
+        self.assertEqual(motif.degenerate_consensus, "CAWCAWAAT")
+        self.assertTrue(
+            np.allclose(
+                motif.relative_entropy,
+                np.array(
+                    [
+                        0.79033346,
+                        1.79461597,
+                        0.33472715,
+                        0.79033346,
+                        1.79461597,
+                        0.33472715,
+                        0.60049374,
+                        1.60901246,
+                        0.47798759,
+                    ]
+                ),
+            )
+        )
+        self.assertEqual(motif[:-2].consensus, "CAACAAA")
 
     def test_sites_parsing(self):
         """Test if Bio.motifs can parse JASPAR-style sites files."""
@@ -3022,13 +3135,13 @@ class TestMEME(unittest.TestCase):
         # using the old instances property:
         with self.assertWarns(BiopythonDeprecationWarning):
             self.assertEqual(len(motif.instances), 7)
-            self.assertAlmostEqual(motif.instances[0].pvalue, 1.21e-08)
-            self.assertAlmostEqual(motif.instances[1].pvalue, 1.87e-08)
-            self.assertAlmostEqual(motif.instances[2].pvalue, 6.62e-08)
-            self.assertAlmostEqual(motif.instances[3].pvalue, 1.05e-07)
-            self.assertAlmostEqual(motif.instances[4].pvalue, 1.69e-07)
-            self.assertAlmostEqual(motif.instances[5].pvalue, 5.62e-07)
-            self.assertAlmostEqual(motif.instances[6].pvalue, 1.08e-06)
+            self.assertAlmostEqual(motif.instances[0].pvalue, 1.21e-08, places=10)
+            self.assertAlmostEqual(motif.instances[1].pvalue, 1.87e-08, places=10)
+            self.assertAlmostEqual(motif.instances[2].pvalue, 6.62e-08, places=10)
+            self.assertAlmostEqual(motif.instances[3].pvalue, 1.05e-07, places=9)
+            self.assertAlmostEqual(motif.instances[4].pvalue, 1.69e-07, places=9)
+            self.assertAlmostEqual(motif.instances[5].pvalue, 5.62e-07, places=9)
+            self.assertAlmostEqual(motif.instances[6].pvalue, 1.08e-06, places=8)
             self.assertEqual(motif.instances[0].sequence_name, "INO1")
             self.assertEqual(motif.instances[1].sequence_name, "FAS1")
             self.assertEqual(motif.instances[2].sequence_name, "ACC1")
@@ -3072,13 +3185,13 @@ class TestMEME(unittest.TestCase):
             self.assertEqual(motif.instances[5], "GTAGCATGTGAAA")
             self.assertEqual(motif.instances[6], "AGTGCATGTGGAA")
         self.assertEqual(len(motif.alignment.sequences), 7)
-        self.assertAlmostEqual(motif.alignment.sequences[0].pvalue, 1.21e-08)
-        self.assertAlmostEqual(motif.alignment.sequences[1].pvalue, 1.87e-08)
-        self.assertAlmostEqual(motif.alignment.sequences[2].pvalue, 6.62e-08)
-        self.assertAlmostEqual(motif.alignment.sequences[3].pvalue, 1.05e-07)
-        self.assertAlmostEqual(motif.alignment.sequences[4].pvalue, 1.69e-07)
-        self.assertAlmostEqual(motif.alignment.sequences[5].pvalue, 5.62e-07)
-        self.assertAlmostEqual(motif.alignment.sequences[6].pvalue, 1.08e-06)
+        self.assertAlmostEqual(motif.alignment.sequences[0].pvalue, 1.21e-08, places=10)
+        self.assertAlmostEqual(motif.alignment.sequences[1].pvalue, 1.87e-08, places=10)
+        self.assertAlmostEqual(motif.alignment.sequences[2].pvalue, 6.62e-08, places=10)
+        self.assertAlmostEqual(motif.alignment.sequences[3].pvalue, 1.05e-07, places=9)
+        self.assertAlmostEqual(motif.alignment.sequences[4].pvalue, 1.69e-07, places=9)
+        self.assertAlmostEqual(motif.alignment.sequences[5].pvalue, 5.62e-07, places=9)
+        self.assertAlmostEqual(motif.alignment.sequences[6].pvalue, 1.08e-06, places=8)
         self.assertEqual(motif.alignment.sequences[0].sequence_name, "INO1")
         self.assertEqual(motif.alignment.sequences[1].sequence_name, "FAS1")
         self.assertEqual(motif.alignment.sequences[2].sequence_name, "ACC1")
@@ -3155,13 +3268,13 @@ class TestMEME(unittest.TestCase):
         # using the old instances property:
         with self.assertWarns(BiopythonDeprecationWarning):
             self.assertEqual(len(motif.instances), 7)
-            self.assertAlmostEqual(motif.instances[0].pvalue, 7.2e-10)
-            self.assertAlmostEqual(motif.instances[1].pvalue, 2.56e-08)
-            self.assertAlmostEqual(motif.instances[2].pvalue, 1.59e-07)
-            self.assertAlmostEqual(motif.instances[3].pvalue, 2.05e-07)
-            self.assertAlmostEqual(motif.instances[4].pvalue, 3.85e-07)
-            self.assertAlmostEqual(motif.instances[5].pvalue, 5.11e-07)
-            self.assertAlmostEqual(motif.instances[6].pvalue, 8.01e-07)
+            self.assertAlmostEqual(motif.instances[0].pvalue, 7.2e-10, places=11)
+            self.assertAlmostEqual(motif.instances[1].pvalue, 2.56e-08, places=10)
+            self.assertAlmostEqual(motif.instances[2].pvalue, 1.59e-07, places=9)
+            self.assertAlmostEqual(motif.instances[3].pvalue, 2.05e-07, places=9)
+            self.assertAlmostEqual(motif.instances[4].pvalue, 3.85e-07, places=9)
+            self.assertAlmostEqual(motif.instances[5].pvalue, 5.11e-07, places=9)
+            self.assertAlmostEqual(motif.instances[6].pvalue, 8.01e-07, places=9)
             self.assertEqual(motif.instances[0].sequence_id, "sequence_1")
             self.assertEqual(motif.instances[1].sequence_id, "sequence_6")
             self.assertEqual(motif.instances[2].sequence_id, "sequence_4")
@@ -3198,13 +3311,13 @@ class TestMEME(unittest.TestCase):
             self.assertEqual(motif.instances[5], "TTGACAACGGCTGGG")
             self.assertEqual(motif.instances[6], "TTCACGCTTGCTACG")
         self.assertEqual(len(motif.alignment.sequences), 7)
-        self.assertAlmostEqual(motif.alignment.sequences[0].pvalue, 7.2e-10)
-        self.assertAlmostEqual(motif.alignment.sequences[1].pvalue, 2.56e-08)
-        self.assertAlmostEqual(motif.alignment.sequences[2].pvalue, 1.59e-07)
-        self.assertAlmostEqual(motif.alignment.sequences[3].pvalue, 2.05e-07)
-        self.assertAlmostEqual(motif.alignment.sequences[4].pvalue, 3.85e-07)
-        self.assertAlmostEqual(motif.alignment.sequences[5].pvalue, 5.11e-07)
-        self.assertAlmostEqual(motif.alignment.sequences[6].pvalue, 8.01e-07)
+        self.assertAlmostEqual(motif.alignment.sequences[0].pvalue, 7.2e-10, places=11)
+        self.assertAlmostEqual(motif.alignment.sequences[1].pvalue, 2.56e-08, places=10)
+        self.assertAlmostEqual(motif.alignment.sequences[2].pvalue, 1.59e-07, places=9)
+        self.assertAlmostEqual(motif.alignment.sequences[3].pvalue, 2.05e-07, places=9)
+        self.assertAlmostEqual(motif.alignment.sequences[4].pvalue, 3.85e-07, places=9)
+        self.assertAlmostEqual(motif.alignment.sequences[5].pvalue, 5.11e-07, places=9)
+        self.assertAlmostEqual(motif.alignment.sequences[6].pvalue, 8.01e-07, places=9)
         self.assertEqual(motif.alignment.sequences[0].sequence_id, "sequence_1")
         self.assertEqual(motif.alignment.sequences[1].sequence_id, "sequence_6")
         self.assertEqual(motif.alignment.sequences[2].sequence_id, "sequence_4")
@@ -3320,44 +3433,44 @@ class TestMEME(unittest.TestCase):
         self.assertEqual(motif.alt_id, "MEME-1")
         self.assertEqual(record["GKVALVTGAASGJGKATAKAL"], motif)
         self.assertEqual(motif.num_occurrences, 33)
-        self.assertAlmostEqual(motif.evalue, 3.6e-165)
+        self.assertAlmostEqual(motif.evalue, 4.0e-129, places=130)
         self.assertEqual(motif.alphabet, "ACDEFGHIKLMNPQRSTVWY")
         # using the old instances property:
         with self.assertWarns(BiopythonDeprecationWarning):
             self.assertEqual(len(motif.instances), 33)
-            self.assertAlmostEqual(motif.instances[0].pvalue, 8.78e-18)
-            self.assertAlmostEqual(motif.instances[1].pvalue, 1.41e-17)
-            self.assertAlmostEqual(motif.instances[2].pvalue, 1.42e-16)
-            self.assertAlmostEqual(motif.instances[3].pvalue, 2.75e-16)
-            self.assertAlmostEqual(motif.instances[4].pvalue, 3.55e-16)
-            self.assertAlmostEqual(motif.instances[5].pvalue, 3.55e-16)
-            self.assertAlmostEqual(motif.instances[6].pvalue, 1.74e-15)
-            self.assertAlmostEqual(motif.instances[7].pvalue, 3.87e-15)
-            self.assertAlmostEqual(motif.instances[8].pvalue, 4.84e-15)
-            self.assertAlmostEqual(motif.instances[9].pvalue, 1.04e-14)
-            self.assertAlmostEqual(motif.instances[10].pvalue, 1.58e-14)
-            self.assertAlmostEqual(motif.instances[11].pvalue, 1.76e-14)
-            self.assertAlmostEqual(motif.instances[12].pvalue, 2.16e-14)
-            self.assertAlmostEqual(motif.instances[13].pvalue, 2.94e-14)
-            self.assertAlmostEqual(motif.instances[14].pvalue, 3.25e-14)
-            self.assertAlmostEqual(motif.instances[15].pvalue, 3.98e-14)
-            self.assertAlmostEqual(motif.instances[16].pvalue, 4.39e-14)
-            self.assertAlmostEqual(motif.instances[17].pvalue, 4.39e-14)
-            self.assertAlmostEqual(motif.instances[18].pvalue, 4.85e-14)
-            self.assertAlmostEqual(motif.instances[19].pvalue, 6.52e-14)
-            self.assertAlmostEqual(motif.instances[20].pvalue, 1.41e-13)
-            self.assertAlmostEqual(motif.instances[21].pvalue, 1.55e-13)
-            self.assertAlmostEqual(motif.instances[22].pvalue, 3.07e-12)
-            self.assertAlmostEqual(motif.instances[23].pvalue, 5.43e-12)
-            self.assertAlmostEqual(motif.instances[24].pvalue, 6.91e-12)
-            self.assertAlmostEqual(motif.instances[25].pvalue, 8.76e-12)
-            self.assertAlmostEqual(motif.instances[26].pvalue, 9.48e-12)
-            self.assertAlmostEqual(motif.instances[27].pvalue, 1.2e-11)
-            self.assertAlmostEqual(motif.instances[28].pvalue, 1.19e-09)
-            self.assertAlmostEqual(motif.instances[29].pvalue, 1.54e-09)
-            self.assertAlmostEqual(motif.instances[30].pvalue, 1.99e-09)
-            self.assertAlmostEqual(motif.instances[31].pvalue, 1.42e-06)
-            self.assertAlmostEqual(motif.instances[32].pvalue, 3.43e-06)
+            self.assertAlmostEqual(motif.instances[0].pvalue, 8.78e-18, places=20)
+            self.assertAlmostEqual(motif.instances[1].pvalue, 1.41e-17, places=19)
+            self.assertAlmostEqual(motif.instances[2].pvalue, 1.42e-16, places=18)
+            self.assertAlmostEqual(motif.instances[3].pvalue, 2.75e-16, places=18)
+            self.assertAlmostEqual(motif.instances[4].pvalue, 3.55e-16, places=18)
+            self.assertAlmostEqual(motif.instances[5].pvalue, 3.55e-16, places=18)
+            self.assertAlmostEqual(motif.instances[6].pvalue, 1.74e-15, places=17)
+            self.assertAlmostEqual(motif.instances[7].pvalue, 3.87e-15, places=17)
+            self.assertAlmostEqual(motif.instances[8].pvalue, 4.84e-15, places=17)
+            self.assertAlmostEqual(motif.instances[9].pvalue, 1.04e-14, places=16)
+            self.assertAlmostEqual(motif.instances[10].pvalue, 1.58e-14, places=16)
+            self.assertAlmostEqual(motif.instances[11].pvalue, 1.76e-14, places=16)
+            self.assertAlmostEqual(motif.instances[12].pvalue, 2.16e-14, places=16)
+            self.assertAlmostEqual(motif.instances[13].pvalue, 2.94e-14, places=16)
+            self.assertAlmostEqual(motif.instances[14].pvalue, 3.25e-14, places=16)
+            self.assertAlmostEqual(motif.instances[15].pvalue, 3.98e-14, places=16)
+            self.assertAlmostEqual(motif.instances[16].pvalue, 4.39e-14, places=16)
+            self.assertAlmostEqual(motif.instances[17].pvalue, 4.39e-14, places=16)
+            self.assertAlmostEqual(motif.instances[18].pvalue, 4.85e-14, places=16)
+            self.assertAlmostEqual(motif.instances[19].pvalue, 6.52e-14, places=16)
+            self.assertAlmostEqual(motif.instances[20].pvalue, 1.41e-13, places=15)
+            self.assertAlmostEqual(motif.instances[21].pvalue, 1.55e-13, places=15)
+            self.assertAlmostEqual(motif.instances[22].pvalue, 3.07e-12, places=14)
+            self.assertAlmostEqual(motif.instances[23].pvalue, 5.43e-12, places=14)
+            self.assertAlmostEqual(motif.instances[24].pvalue, 6.91e-12, places=14)
+            self.assertAlmostEqual(motif.instances[25].pvalue, 8.76e-12, places=14)
+            self.assertAlmostEqual(motif.instances[26].pvalue, 9.48e-12, places=14)
+            self.assertAlmostEqual(motif.instances[27].pvalue, 1.2e-11, places=12)
+            self.assertAlmostEqual(motif.instances[28].pvalue, 1.19e-09, places=11)
+            self.assertAlmostEqual(motif.instances[29].pvalue, 1.54e-09, places=11)
+            self.assertAlmostEqual(motif.instances[30].pvalue, 1.99e-09, places=11)
+            self.assertAlmostEqual(motif.instances[31].pvalue, 1.42e-06, places=8)
+            self.assertAlmostEqual(motif.instances[32].pvalue, 3.43e-06, places=8)
             self.assertEqual(motif.instances[0].sequence_name, "BUDC_KLETE")
             self.assertEqual(motif.instances[1].sequence_name, "YINL_LISMO")
             self.assertEqual(motif.instances[2].sequence_name, "DHII_HUMAN")
@@ -3557,39 +3670,79 @@ class TestMEME(unittest.TestCase):
             self.assertEqual(motif.instances[31], "VDVLINNAGVSGLWCALGDVD")
             self.assertEqual(motif.instances[32], "IIDTNVTGAAATLSAVLPQMV")
         self.assertEqual(len(motif.alignment.sequences), 33)
-        self.assertAlmostEqual(motif.alignment.sequences[0].pvalue, 8.78e-18)
-        self.assertAlmostEqual(motif.alignment.sequences[1].pvalue, 1.41e-17)
-        self.assertAlmostEqual(motif.alignment.sequences[2].pvalue, 1.42e-16)
-        self.assertAlmostEqual(motif.alignment.sequences[3].pvalue, 2.75e-16)
-        self.assertAlmostEqual(motif.alignment.sequences[4].pvalue, 3.55e-16)
-        self.assertAlmostEqual(motif.alignment.sequences[5].pvalue, 3.55e-16)
-        self.assertAlmostEqual(motif.alignment.sequences[6].pvalue, 1.74e-15)
-        self.assertAlmostEqual(motif.alignment.sequences[7].pvalue, 3.87e-15)
-        self.assertAlmostEqual(motif.alignment.sequences[8].pvalue, 4.84e-15)
-        self.assertAlmostEqual(motif.alignment.sequences[9].pvalue, 1.04e-14)
-        self.assertAlmostEqual(motif.alignment.sequences[10].pvalue, 1.58e-14)
-        self.assertAlmostEqual(motif.alignment.sequences[11].pvalue, 1.76e-14)
-        self.assertAlmostEqual(motif.alignment.sequences[12].pvalue, 2.16e-14)
-        self.assertAlmostEqual(motif.alignment.sequences[13].pvalue, 2.94e-14)
-        self.assertAlmostEqual(motif.alignment.sequences[14].pvalue, 3.25e-14)
-        self.assertAlmostEqual(motif.alignment.sequences[15].pvalue, 3.98e-14)
-        self.assertAlmostEqual(motif.alignment.sequences[16].pvalue, 4.39e-14)
-        self.assertAlmostEqual(motif.alignment.sequences[17].pvalue, 4.39e-14)
-        self.assertAlmostEqual(motif.alignment.sequences[18].pvalue, 4.85e-14)
-        self.assertAlmostEqual(motif.alignment.sequences[19].pvalue, 6.52e-14)
-        self.assertAlmostEqual(motif.alignment.sequences[20].pvalue, 1.41e-13)
-        self.assertAlmostEqual(motif.alignment.sequences[21].pvalue, 1.55e-13)
-        self.assertAlmostEqual(motif.alignment.sequences[22].pvalue, 3.07e-12)
-        self.assertAlmostEqual(motif.alignment.sequences[23].pvalue, 5.43e-12)
-        self.assertAlmostEqual(motif.alignment.sequences[24].pvalue, 6.91e-12)
-        self.assertAlmostEqual(motif.alignment.sequences[25].pvalue, 8.76e-12)
-        self.assertAlmostEqual(motif.alignment.sequences[26].pvalue, 9.48e-12)
-        self.assertAlmostEqual(motif.alignment.sequences[27].pvalue, 1.2e-11)
-        self.assertAlmostEqual(motif.alignment.sequences[28].pvalue, 1.19e-09)
-        self.assertAlmostEqual(motif.alignment.sequences[29].pvalue, 1.54e-09)
-        self.assertAlmostEqual(motif.alignment.sequences[30].pvalue, 1.99e-09)
-        self.assertAlmostEqual(motif.alignment.sequences[31].pvalue, 1.42e-06)
-        self.assertAlmostEqual(motif.alignment.sequences[32].pvalue, 3.43e-06)
+        self.assertAlmostEqual(motif.alignment.sequences[0].pvalue, 8.78e-18, places=20)
+        self.assertAlmostEqual(motif.alignment.sequences[1].pvalue, 1.41e-17, places=19)
+        self.assertAlmostEqual(motif.alignment.sequences[2].pvalue, 1.42e-16, places=18)
+        self.assertAlmostEqual(motif.alignment.sequences[3].pvalue, 2.75e-16, places=18)
+        self.assertAlmostEqual(motif.alignment.sequences[4].pvalue, 3.55e-16, places=18)
+        self.assertAlmostEqual(motif.alignment.sequences[5].pvalue, 3.55e-16, places=18)
+        self.assertAlmostEqual(motif.alignment.sequences[6].pvalue, 1.74e-15, places=17)
+        self.assertAlmostEqual(motif.alignment.sequences[7].pvalue, 3.87e-15, places=17)
+        self.assertAlmostEqual(motif.alignment.sequences[8].pvalue, 4.84e-15, places=17)
+        self.assertAlmostEqual(motif.alignment.sequences[9].pvalue, 1.04e-14, places=16)
+        self.assertAlmostEqual(
+            motif.alignment.sequences[10].pvalue, 1.58e-14, places=16
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[11].pvalue, 1.76e-14, places=16
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[12].pvalue, 2.16e-14, places=16
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[13].pvalue, 2.94e-14, places=16
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[14].pvalue, 3.25e-14, places=16
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[15].pvalue, 3.98e-14, places=16
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[16].pvalue, 4.39e-14, places=16
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[17].pvalue, 4.39e-14, places=16
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[18].pvalue, 4.85e-14, places=16
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[19].pvalue, 6.52e-14, places=16
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[20].pvalue, 1.41e-13, places=15
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[21].pvalue, 1.55e-13, places=15
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[22].pvalue, 3.07e-12, places=14
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[23].pvalue, 5.43e-12, places=14
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[24].pvalue, 6.91e-12, places=14
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[25].pvalue, 8.76e-12, places=14
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[26].pvalue, 9.48e-12, places=14
+        )
+        self.assertAlmostEqual(motif.alignment.sequences[27].pvalue, 1.2e-11, places=12)
+        self.assertAlmostEqual(
+            motif.alignment.sequences[28].pvalue, 1.19e-09, places=11
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[29].pvalue, 1.54e-09, places=11
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[30].pvalue, 1.99e-09, places=11
+        )
+        self.assertAlmostEqual(motif.alignment.sequences[31].pvalue, 1.42e-06, places=8)
+        self.assertAlmostEqual(motif.alignment.sequences[32].pvalue, 3.43e-06, places=8)
         self.assertEqual(motif.alignment.sequences[0].sequence_name, "BUDC_KLETE")
         self.assertEqual(motif.alignment.sequences[1].sequence_name, "YINL_LISMO")
         self.assertEqual(motif.alignment.sequences[2].sequence_name, "DHII_HUMAN")
@@ -3795,44 +3948,44 @@ class TestMEME(unittest.TestCase):
         self.assertEqual(motif.alt_id, "MEME-2")
         self.assertEqual(record["VGNPGASAYSASKAAVRGLTESLALELAP"], motif)
         self.assertEqual(motif.num_occurrences, 33)
-        self.assertAlmostEqual(motif.evalue, 3.1e-130)
+        self.assertAlmostEqual(motif.evalue, 3.1e-130, places=131)
         self.assertEqual(motif.alphabet, "ACDEFGHIKLMNPQRSTVWY")
         # using the old instances property:
         with self.assertWarns(BiopythonDeprecationWarning):
             self.assertEqual(len(motif.instances), 33)
-            self.assertAlmostEqual(motif.instances[0].pvalue, 2.09e-21)
-            self.assertAlmostEqual(motif.instances[1].pvalue, 7.63e-20)
-            self.assertAlmostEqual(motif.instances[2].pvalue, 6.49e-19)
-            self.assertAlmostEqual(motif.instances[3].pvalue, 1.92e-18)
-            self.assertAlmostEqual(motif.instances[4].pvalue, 5.46e-18)
-            self.assertAlmostEqual(motif.instances[5].pvalue, 6.21e-18)
-            self.assertAlmostEqual(motif.instances[6].pvalue, 4.52e-17)
-            self.assertAlmostEqual(motif.instances[7].pvalue, 4.52e-17)
-            self.assertAlmostEqual(motif.instances[8].pvalue, 9.21e-17)
-            self.assertAlmostEqual(motif.instances[9].pvalue, 1.65e-16)
-            self.assertAlmostEqual(motif.instances[10].pvalue, 2.07e-16)
-            self.assertAlmostEqual(motif.instances[11].pvalue, 3.65e-16)
-            self.assertAlmostEqual(motif.instances[12].pvalue, 5.7e-16)
-            self.assertAlmostEqual(motif.instances[13].pvalue, 5.7e-16)
-            self.assertAlmostEqual(motif.instances[14].pvalue, 7.93e-16)
-            self.assertAlmostEqual(motif.instances[15].pvalue, 8.85e-16)
-            self.assertAlmostEqual(motif.instances[16].pvalue, 1.1e-15)
-            self.assertAlmostEqual(motif.instances[17].pvalue, 1.69e-15)
-            self.assertAlmostEqual(motif.instances[18].pvalue, 3.54e-15)
-            self.assertAlmostEqual(motif.instances[19].pvalue, 4.83e-15)
-            self.assertAlmostEqual(motif.instances[20].pvalue, 7.27e-15)
-            self.assertAlmostEqual(motif.instances[21].pvalue, 9.85e-15)
-            self.assertAlmostEqual(motif.instances[22].pvalue, 2.41e-14)
-            self.assertAlmostEqual(motif.instances[23].pvalue, 2.66e-14)
-            self.assertAlmostEqual(motif.instances[24].pvalue, 1.22e-13)
-            self.assertAlmostEqual(motif.instances[25].pvalue, 5.18e-13)
-            self.assertAlmostEqual(motif.instances[26].pvalue, 1.24e-12)
-            self.assertAlmostEqual(motif.instances[27].pvalue, 1.35e-12)
-            self.assertAlmostEqual(motif.instances[28].pvalue, 5.59e-12)
-            self.assertAlmostEqual(motif.instances[29].pvalue, 1.44e-10)
-            self.assertAlmostEqual(motif.instances[30].pvalue, 1.61e-08)
-            self.assertAlmostEqual(motif.instances[31].pvalue, 4.26e-08)
-            self.assertAlmostEqual(motif.instances[32].pvalue, 1.16e-07)
+            self.assertAlmostEqual(motif.instances[0].pvalue, 2.09e-21, places=23)
+            self.assertAlmostEqual(motif.instances[1].pvalue, 7.63e-20, places=22)
+            self.assertAlmostEqual(motif.instances[2].pvalue, 6.49e-19, places=21)
+            self.assertAlmostEqual(motif.instances[3].pvalue, 1.92e-18, places=20)
+            self.assertAlmostEqual(motif.instances[4].pvalue, 5.46e-18, places=20)
+            self.assertAlmostEqual(motif.instances[5].pvalue, 6.21e-18, places=20)
+            self.assertAlmostEqual(motif.instances[6].pvalue, 4.52e-17, places=19)
+            self.assertAlmostEqual(motif.instances[7].pvalue, 4.52e-17, places=19)
+            self.assertAlmostEqual(motif.instances[8].pvalue, 9.21e-17, places=19)
+            self.assertAlmostEqual(motif.instances[9].pvalue, 1.65e-16, places=18)
+            self.assertAlmostEqual(motif.instances[10].pvalue, 2.07e-16, places=18)
+            self.assertAlmostEqual(motif.instances[11].pvalue, 3.65e-16, places=18)
+            self.assertAlmostEqual(motif.instances[12].pvalue, 5.7e-16, places=17)
+            self.assertAlmostEqual(motif.instances[13].pvalue, 5.7e-16, places=17)
+            self.assertAlmostEqual(motif.instances[14].pvalue, 7.93e-16, places=18)
+            self.assertAlmostEqual(motif.instances[15].pvalue, 8.85e-16, places=18)
+            self.assertAlmostEqual(motif.instances[16].pvalue, 1.1e-15, places=16)
+            self.assertAlmostEqual(motif.instances[17].pvalue, 1.69e-15, places=17)
+            self.assertAlmostEqual(motif.instances[18].pvalue, 3.54e-15, places=17)
+            self.assertAlmostEqual(motif.instances[19].pvalue, 4.83e-15, places=17)
+            self.assertAlmostEqual(motif.instances[20].pvalue, 7.27e-15, places=17)
+            self.assertAlmostEqual(motif.instances[21].pvalue, 9.85e-15, places=17)
+            self.assertAlmostEqual(motif.instances[22].pvalue, 2.41e-14, places=16)
+            self.assertAlmostEqual(motif.instances[23].pvalue, 2.66e-14, places=16)
+            self.assertAlmostEqual(motif.instances[24].pvalue, 1.22e-13, places=15)
+            self.assertAlmostEqual(motif.instances[25].pvalue, 5.18e-13, places=15)
+            self.assertAlmostEqual(motif.instances[26].pvalue, 1.24e-12, places=14)
+            self.assertAlmostEqual(motif.instances[27].pvalue, 1.35e-12, places=14)
+            self.assertAlmostEqual(motif.instances[28].pvalue, 5.59e-12, places=14)
+            self.assertAlmostEqual(motif.instances[29].pvalue, 1.44e-10, places=12)
+            self.assertAlmostEqual(motif.instances[30].pvalue, 1.61e-08, places=10)
+            self.assertAlmostEqual(motif.instances[31].pvalue, 4.26e-08, places=10)
+            self.assertAlmostEqual(motif.instances[32].pvalue, 1.16e-07, places=9)
             self.assertEqual(motif.instances[0].sequence_name, "BUDC_KLETE")
             self.assertEqual(motif.instances[1].sequence_name, "NODG_RHIME")
             self.assertEqual(motif.instances[2].sequence_name, "FVT1_HUMAN")
@@ -3966,39 +4119,77 @@ class TestMEME(unittest.TestCase):
             self.assertEqual(motif.instances[31], "MGPEGVRVNAISAGPIRTLAASGIKDFRK")
             self.assertEqual(motif.instances[32], "RALKSCSPELQQKFRSETITEEELVGLMN")
         self.assertEqual(len(motif.alignment.sequences), 33)
-        self.assertAlmostEqual(motif.alignment.sequences[0].pvalue, 2.09e-21)
-        self.assertAlmostEqual(motif.alignment.sequences[1].pvalue, 7.63e-20)
-        self.assertAlmostEqual(motif.alignment.sequences[2].pvalue, 6.49e-19)
-        self.assertAlmostEqual(motif.alignment.sequences[3].pvalue, 1.92e-18)
-        self.assertAlmostEqual(motif.alignment.sequences[4].pvalue, 5.46e-18)
-        self.assertAlmostEqual(motif.alignment.sequences[5].pvalue, 6.21e-18)
-        self.assertAlmostEqual(motif.alignment.sequences[6].pvalue, 4.52e-17)
-        self.assertAlmostEqual(motif.alignment.sequences[7].pvalue, 4.52e-17)
-        self.assertAlmostEqual(motif.alignment.sequences[8].pvalue, 9.21e-17)
-        self.assertAlmostEqual(motif.alignment.sequences[9].pvalue, 1.65e-16)
-        self.assertAlmostEqual(motif.alignment.sequences[10].pvalue, 2.07e-16)
-        self.assertAlmostEqual(motif.alignment.sequences[11].pvalue, 3.65e-16)
-        self.assertAlmostEqual(motif.alignment.sequences[12].pvalue, 5.7e-16)
-        self.assertAlmostEqual(motif.alignment.sequences[13].pvalue, 5.7e-16)
-        self.assertAlmostEqual(motif.alignment.sequences[14].pvalue, 7.93e-16)
-        self.assertAlmostEqual(motif.alignment.sequences[15].pvalue, 8.85e-16)
-        self.assertAlmostEqual(motif.alignment.sequences[16].pvalue, 1.1e-15)
-        self.assertAlmostEqual(motif.alignment.sequences[17].pvalue, 1.69e-15)
-        self.assertAlmostEqual(motif.alignment.sequences[18].pvalue, 3.54e-15)
-        self.assertAlmostEqual(motif.alignment.sequences[19].pvalue, 4.83e-15)
-        self.assertAlmostEqual(motif.alignment.sequences[20].pvalue, 7.27e-15)
-        self.assertAlmostEqual(motif.alignment.sequences[21].pvalue, 9.85e-15)
-        self.assertAlmostEqual(motif.alignment.sequences[22].pvalue, 2.41e-14)
-        self.assertAlmostEqual(motif.alignment.sequences[23].pvalue, 2.66e-14)
-        self.assertAlmostEqual(motif.alignment.sequences[24].pvalue, 1.22e-13)
-        self.assertAlmostEqual(motif.alignment.sequences[25].pvalue, 5.18e-13)
-        self.assertAlmostEqual(motif.alignment.sequences[26].pvalue, 1.24e-12)
-        self.assertAlmostEqual(motif.alignment.sequences[27].pvalue, 1.35e-12)
-        self.assertAlmostEqual(motif.alignment.sequences[28].pvalue, 5.59e-12)
-        self.assertAlmostEqual(motif.alignment.sequences[29].pvalue, 1.44e-10)
-        self.assertAlmostEqual(motif.alignment.sequences[30].pvalue, 1.61e-08)
-        self.assertAlmostEqual(motif.alignment.sequences[31].pvalue, 4.26e-08)
-        self.assertAlmostEqual(motif.alignment.sequences[32].pvalue, 1.16e-07)
+        self.assertAlmostEqual(motif.alignment.sequences[0].pvalue, 2.09e-21, places=23)
+        self.assertAlmostEqual(motif.alignment.sequences[1].pvalue, 7.63e-20, places=22)
+        self.assertAlmostEqual(motif.alignment.sequences[2].pvalue, 6.49e-19, places=21)
+        self.assertAlmostEqual(motif.alignment.sequences[3].pvalue, 1.92e-18, places=20)
+        self.assertAlmostEqual(motif.alignment.sequences[4].pvalue, 5.46e-18, places=20)
+        self.assertAlmostEqual(motif.alignment.sequences[5].pvalue, 6.21e-18, places=20)
+        self.assertAlmostEqual(motif.alignment.sequences[6].pvalue, 4.52e-17, places=19)
+        self.assertAlmostEqual(motif.alignment.sequences[7].pvalue, 4.52e-17, places=19)
+        self.assertAlmostEqual(motif.alignment.sequences[8].pvalue, 9.21e-17, places=19)
+        self.assertAlmostEqual(motif.alignment.sequences[9].pvalue, 1.65e-16, places=18)
+        self.assertAlmostEqual(
+            motif.alignment.sequences[10].pvalue, 2.07e-16, places=18
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[11].pvalue, 3.65e-16, places=18
+        )
+        self.assertAlmostEqual(motif.alignment.sequences[12].pvalue, 5.7e-16, places=17)
+        self.assertAlmostEqual(motif.alignment.sequences[13].pvalue, 5.7e-16, places=17)
+        self.assertAlmostEqual(
+            motif.alignment.sequences[14].pvalue, 7.93e-16, places=18
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[15].pvalue, 8.85e-16, places=18
+        )
+        self.assertAlmostEqual(motif.alignment.sequences[16].pvalue, 1.1e-15, places=16)
+        self.assertAlmostEqual(
+            motif.alignment.sequences[17].pvalue, 1.69e-15, places=17
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[18].pvalue, 3.54e-15, places=17
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[19].pvalue, 4.83e-15, places=17
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[20].pvalue, 7.27e-15, places=17
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[21].pvalue, 9.85e-15, places=17
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[22].pvalue, 2.41e-14, places=16
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[23].pvalue, 2.66e-14, places=16
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[24].pvalue, 1.22e-13, places=15
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[25].pvalue, 5.18e-13, places=15
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[26].pvalue, 1.24e-12, places=14
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[27].pvalue, 1.35e-12, places=14
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[28].pvalue, 5.59e-12, places=14
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[29].pvalue, 1.44e-10, places=12
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[30].pvalue, 1.61e-08, places=10
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[31].pvalue, 4.26e-08, places=10
+        )
+        self.assertAlmostEqual(motif.alignment.sequences[32].pvalue, 1.16e-07, places=9)
         self.assertEqual(motif.alignment.sequences[0].sequence_name, "BUDC_KLETE")
         self.assertEqual(motif.alignment.sequences[1].sequence_name, "NODG_RHIME")
         self.assertEqual(motif.alignment.sequences[2].sequence_name, "FVT1_HUMAN")
@@ -4156,35 +4347,35 @@ class TestMEME(unittest.TestCase):
         self.assertEqual(motif.name, "GGFGGRPGKEVDLCYTYCALAALAJLGSLD")
         self.assertEqual(record["GGFGGRPGKEVDLCYTYCALAALAJLGSLD"], motif)
         self.assertEqual(motif.num_occurrences, 24)
-        self.assertAlmostEqual(motif.evalue, 2.2e-94)
+        self.assertAlmostEqual(motif.evalue, 2.2e-94, places=95)
         self.assertEqual(motif.alphabet, "ACDEFGHIKLMNPQRSTVWY")
         # using the old instances property:
         with self.assertWarns(BiopythonDeprecationWarning):
             self.assertEqual(len(motif.instances), 24)
-            self.assertAlmostEqual(motif.instances[0].pvalue, 6.98e-22)
-            self.assertAlmostEqual(motif.instances[1].pvalue, 4.67e-21)
-            self.assertAlmostEqual(motif.instances[2].pvalue, 1.25e-19)
-            self.assertAlmostEqual(motif.instances[3].pvalue, 1.56e-19)
-            self.assertAlmostEqual(motif.instances[4].pvalue, 2.44e-19)
-            self.assertAlmostEqual(motif.instances[5].pvalue, 6.47e-19)
-            self.assertAlmostEqual(motif.instances[6].pvalue, 8.9e-19)
-            self.assertAlmostEqual(motif.instances[7].pvalue, 2.53e-18)
-            self.assertAlmostEqual(motif.instances[8].pvalue, 1.27e-17)
-            self.assertAlmostEqual(motif.instances[9].pvalue, 2.77e-17)
-            self.assertAlmostEqual(motif.instances[10].pvalue, 4.93e-17)
-            self.assertAlmostEqual(motif.instances[11].pvalue, 7.19e-17)
-            self.assertAlmostEqual(motif.instances[12].pvalue, 8.68e-17)
-            self.assertAlmostEqual(motif.instances[13].pvalue, 2.62e-16)
-            self.assertAlmostEqual(motif.instances[14].pvalue, 2.87e-16)
-            self.assertAlmostEqual(motif.instances[15].pvalue, 7.66e-15)
-            self.assertAlmostEqual(motif.instances[16].pvalue, 2.21e-14)
-            self.assertAlmostEqual(motif.instances[17].pvalue, 3.29e-14)
-            self.assertAlmostEqual(motif.instances[18].pvalue, 7.21e-14)
-            self.assertAlmostEqual(motif.instances[19].pvalue, 1.14e-13)
-            self.assertAlmostEqual(motif.instances[20].pvalue, 1.67e-13)
-            self.assertAlmostEqual(motif.instances[21].pvalue, 4.42e-13)
-            self.assertAlmostEqual(motif.instances[22].pvalue, 5.11e-13)
-            self.assertAlmostEqual(motif.instances[23].pvalue, 2.82e-10)
+            self.assertAlmostEqual(motif.instances[0].pvalue, 6.98e-22, places=24)
+            self.assertAlmostEqual(motif.instances[1].pvalue, 4.67e-21, places=23)
+            self.assertAlmostEqual(motif.instances[2].pvalue, 1.25e-19, places=21)
+            self.assertAlmostEqual(motif.instances[3].pvalue, 1.56e-19, places=21)
+            self.assertAlmostEqual(motif.instances[4].pvalue, 2.44e-19, places=21)
+            self.assertAlmostEqual(motif.instances[5].pvalue, 6.47e-19, places=21)
+            self.assertAlmostEqual(motif.instances[6].pvalue, 8.9e-19, places=20)
+            self.assertAlmostEqual(motif.instances[7].pvalue, 2.53e-18, places=20)
+            self.assertAlmostEqual(motif.instances[8].pvalue, 1.27e-17, places=19)
+            self.assertAlmostEqual(motif.instances[9].pvalue, 2.77e-17, places=19)
+            self.assertAlmostEqual(motif.instances[10].pvalue, 4.93e-17, places=19)
+            self.assertAlmostEqual(motif.instances[11].pvalue, 7.19e-17, places=19)
+            self.assertAlmostEqual(motif.instances[12].pvalue, 8.68e-17, places=19)
+            self.assertAlmostEqual(motif.instances[13].pvalue, 2.62e-16, places=18)
+            self.assertAlmostEqual(motif.instances[14].pvalue, 2.87e-16, places=18)
+            self.assertAlmostEqual(motif.instances[15].pvalue, 7.66e-15, places=17)
+            self.assertAlmostEqual(motif.instances[16].pvalue, 2.21e-14, places=16)
+            self.assertAlmostEqual(motif.instances[17].pvalue, 3.29e-14, places=16)
+            self.assertAlmostEqual(motif.instances[18].pvalue, 7.21e-14, places=16)
+            self.assertAlmostEqual(motif.instances[19].pvalue, 1.14e-13, places=15)
+            self.assertAlmostEqual(motif.instances[20].pvalue, 1.67e-13, places=15)
+            self.assertAlmostEqual(motif.instances[21].pvalue, 4.42e-13, places=15)
+            self.assertAlmostEqual(motif.instances[22].pvalue, 5.11e-13, places=15)
+            self.assertAlmostEqual(motif.instances[23].pvalue, 2.82e-10, places=12)
             self.assertEqual(motif.instances[0].sequence_name, "BET2_YEAST")
             self.assertEqual(motif.instances[1].sequence_name, "RATRABGERB")
             self.assertEqual(motif.instances[2].sequence_name, "CAL1_YEAST")
@@ -4330,30 +4521,58 @@ class TestMEME(unittest.TestCase):
             self.assertEqual(motif.instances[22], "PGLRDKPGAHSDFYHTNYCLLGLAVAESSY")
             self.assertEqual(motif.instances[23], "HNFEYWLTEHLRLNGIYWGLTALCVLDSPE")
         self.assertEqual(len(motif.alignment.sequences), 24)
-        self.assertAlmostEqual(motif.alignment.sequences[0].pvalue, 6.98e-22)
-        self.assertAlmostEqual(motif.alignment.sequences[1].pvalue, 4.67e-21)
-        self.assertAlmostEqual(motif.alignment.sequences[2].pvalue, 1.25e-19)
-        self.assertAlmostEqual(motif.alignment.sequences[3].pvalue, 1.56e-19)
-        self.assertAlmostEqual(motif.alignment.sequences[4].pvalue, 2.44e-19)
-        self.assertAlmostEqual(motif.alignment.sequences[5].pvalue, 6.47e-19)
-        self.assertAlmostEqual(motif.alignment.sequences[6].pvalue, 8.9e-19)
-        self.assertAlmostEqual(motif.alignment.sequences[7].pvalue, 2.53e-18)
-        self.assertAlmostEqual(motif.alignment.sequences[8].pvalue, 1.27e-17)
-        self.assertAlmostEqual(motif.alignment.sequences[9].pvalue, 2.77e-17)
-        self.assertAlmostEqual(motif.alignment.sequences[10].pvalue, 4.93e-17)
-        self.assertAlmostEqual(motif.alignment.sequences[11].pvalue, 7.19e-17)
-        self.assertAlmostEqual(motif.alignment.sequences[12].pvalue, 8.68e-17)
-        self.assertAlmostEqual(motif.alignment.sequences[13].pvalue, 2.62e-16)
-        self.assertAlmostEqual(motif.alignment.sequences[14].pvalue, 2.87e-16)
-        self.assertAlmostEqual(motif.alignment.sequences[15].pvalue, 7.66e-15)
-        self.assertAlmostEqual(motif.alignment.sequences[16].pvalue, 2.21e-14)
-        self.assertAlmostEqual(motif.alignment.sequences[17].pvalue, 3.29e-14)
-        self.assertAlmostEqual(motif.alignment.sequences[18].pvalue, 7.21e-14)
-        self.assertAlmostEqual(motif.alignment.sequences[19].pvalue, 1.14e-13)
-        self.assertAlmostEqual(motif.alignment.sequences[20].pvalue, 1.67e-13)
-        self.assertAlmostEqual(motif.alignment.sequences[21].pvalue, 4.42e-13)
-        self.assertAlmostEqual(motif.alignment.sequences[22].pvalue, 5.11e-13)
-        self.assertAlmostEqual(motif.alignment.sequences[23].pvalue, 2.82e-10)
+        self.assertAlmostEqual(motif.alignment.sequences[0].pvalue, 6.98e-22, places=24)
+        self.assertAlmostEqual(motif.alignment.sequences[1].pvalue, 4.67e-21, places=23)
+        self.assertAlmostEqual(motif.alignment.sequences[2].pvalue, 1.25e-19, places=21)
+        self.assertAlmostEqual(motif.alignment.sequences[3].pvalue, 1.56e-19, places=21)
+        self.assertAlmostEqual(motif.alignment.sequences[4].pvalue, 2.44e-19, places=21)
+        self.assertAlmostEqual(motif.alignment.sequences[5].pvalue, 6.47e-19, places=21)
+        self.assertAlmostEqual(motif.alignment.sequences[6].pvalue, 8.9e-19, places=20)
+        self.assertAlmostEqual(motif.alignment.sequences[7].pvalue, 2.53e-18, places=20)
+        self.assertAlmostEqual(motif.alignment.sequences[8].pvalue, 1.27e-17, places=19)
+        self.assertAlmostEqual(motif.alignment.sequences[9].pvalue, 2.77e-17, places=19)
+        self.assertAlmostEqual(
+            motif.alignment.sequences[10].pvalue, 4.93e-17, places=19
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[11].pvalue, 7.19e-17, places=19
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[12].pvalue, 8.68e-17, places=19
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[13].pvalue, 2.62e-16, places=18
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[14].pvalue, 2.87e-16, places=18
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[15].pvalue, 7.66e-15, places=17
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[16].pvalue, 2.21e-14, places=16
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[17].pvalue, 3.29e-14, places=16
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[18].pvalue, 7.21e-14, places=16
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[19].pvalue, 1.14e-13, places=15
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[20].pvalue, 1.67e-13, places=15
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[21].pvalue, 4.42e-13, places=15
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[22].pvalue, 5.11e-13, places=15
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[23].pvalue, 2.82e-10, places=12
+        )
         self.assertEqual(motif.alignment.sequences[0].sequence_name, "BET2_YEAST")
         self.assertEqual(motif.alignment.sequences[1].sequence_name, "RATRABGERB")
         self.assertEqual(motif.alignment.sequences[2].sequence_name, "CAL1_YEAST")
@@ -4532,30 +4751,42 @@ class TestMEME(unittest.TestCase):
         self.assertEqual(motif.name, "JNKEKLLEYILSCQ")
         self.assertEqual(record["JNKEKLLEYILSCQ"], motif)
         self.assertEqual(motif.num_occurrences, 21)
-        self.assertAlmostEqual(motif.evalue, 3.1e-19)
+        self.assertAlmostEqual(motif.evalue, 6.1e-21, places=22)
         self.assertEqual(motif.alphabet, "ACDEFGHIKLMNPQRSTVWY")
         self.assertEqual(len(motif.alignment.sequences), 21)
-        self.assertAlmostEqual(motif.alignment.sequences[0].pvalue, 2.71e-12)
-        self.assertAlmostEqual(motif.alignment.sequences[1].pvalue, 5.7e-12)
-        self.assertAlmostEqual(motif.alignment.sequences[2].pvalue, 6.43e-12)
-        self.assertAlmostEqual(motif.alignment.sequences[3].pvalue, 2.61e-11)
-        self.assertAlmostEqual(motif.alignment.sequences[4].pvalue, 6.3e-11)
-        self.assertAlmostEqual(motif.alignment.sequences[5].pvalue, 2.7e-10)
-        self.assertAlmostEqual(motif.alignment.sequences[6].pvalue, 4.03e-10)
-        self.assertAlmostEqual(motif.alignment.sequences[7].pvalue, 1.27e-09)
-        self.assertAlmostEqual(motif.alignment.sequences[8].pvalue, 3.17e-09)
-        self.assertAlmostEqual(motif.alignment.sequences[9].pvalue, 6.39e-09)
-        self.assertAlmostEqual(motif.alignment.sequences[10].pvalue, 6.96e-09)
-        self.assertAlmostEqual(motif.alignment.sequences[11].pvalue, 1.06e-08)
-        self.assertAlmostEqual(motif.alignment.sequences[12].pvalue, 1.26e-08)
-        self.assertAlmostEqual(motif.alignment.sequences[13].pvalue, 1.37e-08)
-        self.assertAlmostEqual(motif.alignment.sequences[14].pvalue, 2.07e-08)
-        self.assertAlmostEqual(motif.alignment.sequences[15].pvalue, 4.96e-08)
-        self.assertAlmostEqual(motif.alignment.sequences[16].pvalue, 1.15e-07)
-        self.assertAlmostEqual(motif.alignment.sequences[17].pvalue, 1.44e-07)
-        self.assertAlmostEqual(motif.alignment.sequences[18].pvalue, 1.55e-07)
-        self.assertAlmostEqual(motif.alignment.sequences[19].pvalue, 1.93e-07)
-        self.assertAlmostEqual(motif.alignment.sequences[20].pvalue, 5.2e-07)
+        self.assertAlmostEqual(motif.alignment.sequences[0].pvalue, 2.71e-12, places=14)
+        self.assertAlmostEqual(motif.alignment.sequences[1].pvalue, 5.7e-12, places=13)
+        self.assertAlmostEqual(motif.alignment.sequences[2].pvalue, 6.43e-12, places=14)
+        self.assertAlmostEqual(motif.alignment.sequences[3].pvalue, 2.61e-11, places=13)
+        self.assertAlmostEqual(motif.alignment.sequences[4].pvalue, 6.3e-11, places=12)
+        self.assertAlmostEqual(motif.alignment.sequences[5].pvalue, 2.7e-10, places=11)
+        self.assertAlmostEqual(motif.alignment.sequences[6].pvalue, 4.03e-10, places=12)
+        self.assertAlmostEqual(motif.alignment.sequences[7].pvalue, 1.27e-09, places=11)
+        self.assertAlmostEqual(motif.alignment.sequences[8].pvalue, 3.17e-09, places=11)
+        self.assertAlmostEqual(motif.alignment.sequences[9].pvalue, 6.39e-09, places=11)
+        self.assertAlmostEqual(
+            motif.alignment.sequences[10].pvalue, 6.96e-09, places=11
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[11].pvalue, 1.06e-08, places=10
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[12].pvalue, 1.26e-08, places=10
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[13].pvalue, 1.37e-08, places=10
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[14].pvalue, 2.07e-08, places=10
+        )
+        self.assertAlmostEqual(
+            motif.alignment.sequences[15].pvalue, 4.96e-08, places=10
+        )
+        self.assertAlmostEqual(motif.alignment.sequences[16].pvalue, 1.15e-07, places=9)
+        self.assertAlmostEqual(motif.alignment.sequences[17].pvalue, 1.44e-07, places=9)
+        self.assertAlmostEqual(motif.alignment.sequences[18].pvalue, 1.55e-07, places=9)
+        self.assertAlmostEqual(motif.alignment.sequences[19].pvalue, 1.93e-07, places=9)
+        self.assertAlmostEqual(motif.alignment.sequences[20].pvalue, 5.2e-07, places=8)
         self.assertEqual(motif.alignment.sequences[0].sequence_name, "RATRABGERB")
         self.assertEqual(motif.alignment.sequences[1].sequence_name, "BET2_YEAST")
         self.assertEqual(motif.alignment.sequences[2].sequence_name, "RATRABGERB")
@@ -4685,27 +4916,27 @@ class TestMEME(unittest.TestCase):
         # using the old instances property:
         with self.assertWarns(BiopythonDeprecationWarning):
             self.assertEqual(len(motif.instances), 21)
-            self.assertAlmostEqual(motif.instances[0].pvalue, 2.71e-12)
-            self.assertAlmostEqual(motif.instances[1].pvalue, 5.7e-12)
-            self.assertAlmostEqual(motif.instances[2].pvalue, 6.43e-12)
-            self.assertAlmostEqual(motif.instances[3].pvalue, 2.61e-11)
-            self.assertAlmostEqual(motif.instances[4].pvalue, 6.3e-11)
-            self.assertAlmostEqual(motif.instances[5].pvalue, 2.7e-10)
-            self.assertAlmostEqual(motif.instances[6].pvalue, 4.03e-10)
-            self.assertAlmostEqual(motif.instances[7].pvalue, 1.27e-09)
-            self.assertAlmostEqual(motif.instances[8].pvalue, 3.17e-09)
-            self.assertAlmostEqual(motif.instances[9].pvalue, 6.39e-09)
-            self.assertAlmostEqual(motif.instances[10].pvalue, 6.96e-09)
-            self.assertAlmostEqual(motif.instances[11].pvalue, 1.06e-08)
-            self.assertAlmostEqual(motif.instances[12].pvalue, 1.26e-08)
-            self.assertAlmostEqual(motif.instances[13].pvalue, 1.37e-08)
-            self.assertAlmostEqual(motif.instances[14].pvalue, 2.07e-08)
-            self.assertAlmostEqual(motif.instances[15].pvalue, 4.96e-08)
-            self.assertAlmostEqual(motif.instances[16].pvalue, 1.15e-07)
-            self.assertAlmostEqual(motif.instances[17].pvalue, 1.44e-07)
-            self.assertAlmostEqual(motif.instances[18].pvalue, 1.55e-07)
-            self.assertAlmostEqual(motif.instances[19].pvalue, 1.93e-07)
-            self.assertAlmostEqual(motif.instances[20].pvalue, 5.2e-07)
+            self.assertAlmostEqual(motif.instances[0].pvalue, 2.71e-12, places=14)
+            self.assertAlmostEqual(motif.instances[1].pvalue, 5.7e-12, places=13)
+            self.assertAlmostEqual(motif.instances[2].pvalue, 6.43e-12, places=14)
+            self.assertAlmostEqual(motif.instances[3].pvalue, 2.61e-11, places=13)
+            self.assertAlmostEqual(motif.instances[4].pvalue, 6.3e-11, places=12)
+            self.assertAlmostEqual(motif.instances[5].pvalue, 2.7e-10, places=11)
+            self.assertAlmostEqual(motif.instances[6].pvalue, 4.03e-10, places=12)
+            self.assertAlmostEqual(motif.instances[7].pvalue, 1.27e-09, places=11)
+            self.assertAlmostEqual(motif.instances[8].pvalue, 3.17e-09, places=11)
+            self.assertAlmostEqual(motif.instances[9].pvalue, 6.39e-09, places=11)
+            self.assertAlmostEqual(motif.instances[10].pvalue, 6.96e-09, places=11)
+            self.assertAlmostEqual(motif.instances[11].pvalue, 1.06e-08, places=10)
+            self.assertAlmostEqual(motif.instances[12].pvalue, 1.26e-08, places=10)
+            self.assertAlmostEqual(motif.instances[13].pvalue, 1.37e-08, places=10)
+            self.assertAlmostEqual(motif.instances[14].pvalue, 2.07e-08, places=10)
+            self.assertAlmostEqual(motif.instances[15].pvalue, 4.96e-08, places=10)
+            self.assertAlmostEqual(motif.instances[16].pvalue, 1.15e-07, places=9)
+            self.assertAlmostEqual(motif.instances[17].pvalue, 1.44e-07, places=9)
+            self.assertAlmostEqual(motif.instances[18].pvalue, 1.55e-07, places=9)
+            self.assertAlmostEqual(motif.instances[19].pvalue, 1.93e-07, places=9)
+            self.assertAlmostEqual(motif.instances[20].pvalue, 5.2e-07, places=8)
             self.assertEqual(motif.instances[0].sequence_name, "RATRABGERB")
             self.assertEqual(motif.instances[1].sequence_name, "BET2_YEAST")
             self.assertEqual(motif.instances[2].sequence_name, "RATRABGERB")
@@ -4843,7 +5074,7 @@ class TestMEME(unittest.TestCase):
         self.assertEqual(record.alphabet, "ACGT")
         self.assertEqual(len(record.sequences), 0)
         self.assertEqual(record.command, "")
-        self.assertEqual(len(record), 2)
+        self.assertEqual(len(record), 3)
         motif = record[0]
         self.assertEqual(motif.name, "KRP")
         self.assertEqual(record["KRP"], motif)
@@ -4853,7 +5084,7 @@ class TestMEME(unittest.TestCase):
         self.assertAlmostEqual(motif.background["C"], 0.1828171828171828)
         self.assertAlmostEqual(motif.background["G"], 0.20879120879120877)
         self.assertAlmostEqual(motif.background["T"], 0.30569430569430567)
-        self.assertAlmostEqual(motif.evalue, 4.1e-09)
+        self.assertAlmostEqual(motif.evalue, 4.1e-09, places=10)
         self.assertEqual(motif.alphabet, "ACGT")
         self.assertIsNone(motif.alignment)
         # using the old instances property:
@@ -4899,7 +5130,7 @@ class TestMEME(unittest.TestCase):
         self.assertAlmostEqual(motif.background["C"], 0.1828171828171828)
         self.assertAlmostEqual(motif.background["G"], 0.20879120879120877)
         self.assertAlmostEqual(motif.background["T"], 0.30569430569430567)
-        self.assertAlmostEqual(motif.evalue, 4.1e-09)
+        self.assertAlmostEqual(motif.evalue, 3.2e-35, places=36)
         self.assertEqual(motif.alphabet, "ACGT")
         self.assertIsNone(motif.alignment)
         self.assertEqual(motif.consensus, "TACTGTATATATATCCAG")
@@ -4935,9 +5166,200 @@ class TestMEME(unittest.TestCase):
         # using the old instances property:
         with self.assertWarns(BiopythonDeprecationWarning):
             self.assertIsNone(motif.instances)
+        with open("motifs/minimal_test.meme") as stream:
+            record = motifs.parse(stream, "minimal")
+        motif = record[2]
+        self.assertEqual(motif.name, "IFXA_no_nsites_no_evalue")
+        self.assertEqual(record["IFXA_no_nsites_no_evalue"], motif)
+        self.assertEqual(motif.num_occurrences, 20)
+        self.assertEqual(motif.length, 18)
+        self.assertAlmostEqual(motif.background["A"], 0.30269730269730266)
+        self.assertAlmostEqual(motif.background["C"], 0.1828171828171828)
+        self.assertAlmostEqual(motif.background["G"], 0.20879120879120877)
+        self.assertAlmostEqual(motif.background["T"], 0.30569430569430567)
+        self.assertAlmostEqual(motif.evalue, 0.0, places=36)
+        self.assertEqual(motif.alphabet, "ACGT")
+        self.assertIsNone(motif.alignment)
+        self.assertEqual(motif.consensus, "TACTGTATATATATCCAG")
+        self.assertEqual(motif.degenerate_consensus, "TACTGTATATAHAWMCAG")
+        self.assertTrue(
+            np.allclose(
+                motif.relative_entropy,
+                np.array(
+                    [
+                        0.99075309,
+                        1.16078104,
+                        2.45152642,
+                        1.70983842,
+                        2.25986713,
+                        1.70983842,
+                        1.16078104,
+                        1.46052586,
+                        1.16078104,
+                        1.10213019,
+                        0.29911041,
+                        0.36915367,
+                        1.72405228,
+                        0.37696488,
+                        0.85258086,
+                        2.45152642,
+                        1.72405228,
+                        1.42793329,
+                    ]
+                ),
+            )
+        )
+        self.assertEqual(motif[2:9].consensus, "CTGTATA")
+        # using the old instances property:
+        with self.assertWarns(BiopythonDeprecationWarning):
+            self.assertIsNone(motif.instances)
 
     def test_meme_parser_rna(self):
         """Test if Bio.motifs can parse MEME output files using RNA."""
+        with open("motifs/minimal_test_rna.meme") as stream:
+            record = motifs.parse(stream, "minimal")
+        self.assertEqual(record.version, "4")
+        self.assertEqual(record.alphabet, "ACGU")
+        self.assertEqual(len(record.sequences), 0)
+        self.assertEqual(record.command, "")
+        self.assertEqual(len(record), 3)
+        motif = record[0]
+        self.assertEqual(motif.name, "KRP_fake_RNA")
+        self.assertEqual(record["KRP_fake_RNA"], motif)
+        self.assertEqual(motif.num_occurrences, 17)
+        self.assertEqual(motif.length, 19)
+        self.assertAlmostEqual(motif.background["A"], 0.30269730269730266)
+        self.assertAlmostEqual(motif.background["C"], 0.1828171828171828)
+        self.assertAlmostEqual(motif.background["G"], 0.20879120879120877)
+        self.assertAlmostEqual(motif.background["U"], 0.30569430569430567)
+        self.assertAlmostEqual(motif.evalue, 4.1e-09, places=10)
+        self.assertEqual(motif.alphabet, "ACGU")
+        self.assertIsNone(motif.alignment)
+        # using the old instances property:
+        with self.assertWarns(BiopythonDeprecationWarning):
+            self.assertIsNone(motif.instances)
+        self.assertEqual(motif.consensus, "UGUGAUCGAGGUCACACUU")
+        self.assertEqual(motif.degenerate_consensus, "UGUGANNNWGNUCACAYWW")
+        self.assertTrue(
+            np.allclose(
+                motif.relative_entropy,
+                np.array(
+                    [
+                        1.1684297174927525,
+                        0.9432809925744818,
+                        1.4307101633876265,
+                        1.1549413780465179,
+                        0.9308256303218774,
+                        0.009164393966550805,
+                        0.20124190687894253,
+                        0.17618542656995528,
+                        0.36777933103380855,
+                        0.6635834532368525,
+                        0.07729943368061855,
+                        0.9838293592717438,
+                        1.72489868427398,
+                        0.8397561713453014,
+                        1.72489868427398,
+                        0.8455332015343343,
+                        0.3106481207768122,
+                        0.7382733641762232,
+                        0.537435993300495,
+                    ]
+                ),
+            )
+        )
+        self.assertEqual(motif[2:9].consensus, "UGAUCGA")
+        motif = record[1]
+        self.assertEqual(motif.name, "IFXA_fake_RNA")
+        self.assertEqual(record["IFXA_fake_RNA"], motif)
+        self.assertEqual(motif.num_occurrences, 14)
+        self.assertEqual(motif.length, 18)
+        self.assertAlmostEqual(motif.background["A"], 0.30269730269730266)
+        self.assertAlmostEqual(motif.background["C"], 0.1828171828171828)
+        self.assertAlmostEqual(motif.background["G"], 0.20879120879120877)
+        self.assertAlmostEqual(motif.background["U"], 0.30569430569430567)
+        self.assertAlmostEqual(motif.evalue, 3.2e-35, places=36)
+        self.assertEqual(motif.alphabet, "ACGU")
+        self.assertIsNone(motif.alignment)
+        self.assertEqual(motif.consensus, "UACUGUAUAUAUAUCCAG")
+        self.assertEqual(motif.degenerate_consensus, "UACUGUAUAUAHAWMCAG")
+        self.assertTrue(
+            np.allclose(
+                motif.relative_entropy,
+                np.array(
+                    [
+                        0.9632889858595118,
+                        1.02677956765017,
+                        2.451526420551951,
+                        1.7098384161433415,
+                        2.2598671267551107,
+                        1.7098384161433415,
+                        1.02677956765017,
+                        1.391583804103081,
+                        1.02677956765017,
+                        1.1201961888781142,
+                        0.27822438781180836,
+                        0.36915366971717867,
+                        1.7240522753630425,
+                        0.3802185945622609,
+                        0.790937683007783,
+                        2.451526420551951,
+                        1.7240522753630425,
+                        1.3924085743645374,
+                    ]
+                ),
+            )
+        )
+        self.assertEqual(motif[2:9].consensus, "CUGUAUA")
+        # using the old instances property:
+        with self.assertWarns(BiopythonDeprecationWarning):
+            self.assertIsNone(motif.instances)
+
+        motif = record[2]
+        self.assertEqual(motif.name, "IFXA_no_nsites_no_evalue_fake_RNA")
+        self.assertEqual(record["IFXA_no_nsites_no_evalue_fake_RNA"], motif)
+        self.assertEqual(motif.num_occurrences, 20)
+        self.assertEqual(motif.length, 18)
+        self.assertAlmostEqual(motif.background["A"], 0.30269730269730266)
+        self.assertAlmostEqual(motif.background["C"], 0.1828171828171828)
+        self.assertAlmostEqual(motif.background["G"], 0.20879120879120877)
+        self.assertAlmostEqual(motif.background["U"], 0.30569430569430567)
+        self.assertAlmostEqual(motif.evalue, 0.0, places=36)
+        self.assertEqual(motif.alphabet, "ACGU")
+        self.assertIsNone(motif.alignment)
+        self.assertEqual(motif.consensus, "UACUGUAUAUAUAUCCAG")
+        self.assertEqual(motif.degenerate_consensus, "UACUGUAUAUAHAWMCAG")
+        self.assertTrue(
+            np.allclose(
+                motif.relative_entropy,
+                np.array(
+                    [
+                        0.99075309,
+                        1.16078104,
+                        2.45152642,
+                        1.70983842,
+                        2.25986713,
+                        1.70983842,
+                        1.16078104,
+                        1.46052586,
+                        1.16078104,
+                        1.10213019,
+                        0.29911041,
+                        0.36915367,
+                        1.72405228,
+                        0.37696488,
+                        0.85258086,
+                        2.45152642,
+                        1.72405228,
+                        1.42793329,
+                    ]
+                ),
+            )
+        )
+        self.assertEqual(motif[2:9].consensus, "CUGUAUA")
+        # using the old instances property:
+        with self.assertWarns(BiopythonDeprecationWarning):
+            self.assertIsNone(motif.instances)
 
 
 class TestMAST(unittest.TestCase):

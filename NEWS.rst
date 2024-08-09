@@ -17,6 +17,25 @@ This release of Biopython supports Python 3.9, 3.10, 3.11 and 3.12. It
 has also been tested on PyPy3.9 v7.3.13. Python 3.9 is approaching end of
 life, our support for it is now deprecated.
 
+``Bio.motifs`` now supports reading PFM from Cys2His2 Zinc Finger Proteins PWM
+Predictor and reading motifs in ``pfm-four-columns`` format will set motif name
+to "" instead of None, when no motif name was found.
+
+Tests that use assertAlmostEqual calls now use ``places`` parameter with enough
+presision when comparing very small numbers in scientific notation.
+
+``Bio.motifs`` now supports reverse complementing RNA motifs and correctly
+generating degenerate consensus sequences for RNA motifs.
+
+``Bio.motifs.minimal`` now supports parsing RNA motifs and parsing motifs
+for which not all statistics are provided (e.g. missing E-values or nsites).
+
+Many thanks to the Biopython developers and community for making this release
+possible, especially the following contributors:
+
+- Gert Hulselmans
+- Peter Cock
+
 28 June 2024: Biopython 1.84
 ============================
 
